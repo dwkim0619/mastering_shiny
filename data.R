@@ -1,5 +1,4 @@
 library(tidyverse)
-# install_github("hadley/neiss")
 library(neiss)
 
 top_prod <- injuries %>%

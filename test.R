@@ -39,4 +39,7 @@ selected %>%
   sample_n(10) %>%
   pull(narrative)
 
-head(products)
+injuries %>%
+  mutate(diag = fct_lump(fct_infreq(diag), n = 5)) %>%
+  group_by(diag) %>%
+  summarise(n = as.integer(sum(weight)))
