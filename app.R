@@ -1,52 +1,51 @@
 library(shiny)
+library(tidyverse)
+library(vroom)
+# library(data.table)
+
+# kwa_list <- vroom('./data/kwa_list.csv')
+# pt_list <- vroom('./data/pt_list.csv')
+# pt_list %>%
+#   count(W01SEX, AGES) %>%
+#   ggplot(aes(AGES, n, color = W01SEX)) + 
+#   geom_line()
+# suga_list <- vroom('./data/suga_list.zip')
+# suga_list %>%
+#   filter(KWA == 'IM', BHCD == 'C1') %>%
+#   mutate(SUGACD = fct_lump(fct_infreq(SUGACD), n = 10)) %>%
+#   count(SUGACD)
+
+# suga_list %>%
+#   filter(KWA == 'IM', BHCD == 'C1', (str_detect(SUGACD, '^A'))) 
+
 
 ui <- fluidPage(
   fluidRow(
-    column(6,
-           selectInput('code', 'Product', 
-# the product name in the UI and
-# returns the product code to the server.
-                       setNames(products$prod_code, products$title)))
+    column(6, selectInput('kwa', 'Departments', setNames(kwa_list$KWA, kwa_list$KWANM)))
   ),
   fluidRow(
     column(12, plotOutput('age_sex'))
   ),
   fluidRow(
-    column(4, tableOutput('diag')),
-    column(4, tableOutput('body_part')),
-    column(4, tableOutput('location'))
+    column(4, tableOutput('c1'))
   )
 )
 
 server <- function(input, output, session) {
-  selected <- reactive(injuries %>% filter(prod_code == input$code))
-  
-  output$diag <- renderTable(
-    selected() %>% count(diag, wt = weight, sort = T)
-  )
-  
-  output$body_part <- renderTable(
-    selected() %>% count(body_part, wt = weight, sort = T)
-  )
-  
-  output$location <- renderTable(
-    selected() %>% count(location, wt = weight, sort = T)
-  )
-  
-  summary <- reactive({
-    selected() %>%
-      count(age, sex, wt = weight) %>%
-      left_join(population, by = c('age', 'sex')) %>%
-      mutate(rate = n / population * 1e4)
+  selected_pt_list <- reactive(pt_list %>% filter(W03KWA == input$kwa) %>% count(W01SEX, AGES))
+  selected_suga_list <- reactive({
+    suga_list %>%
+      filter(KWA == input$kwa, BHCD == 'C1') %>%
+      mutate(SUGACD = fct_lump(fct_infreq(SUGACD), n = 10)) %>%
+      count(SUGACD)
   })
   
   output$age_sex <- renderPlot({
-    summary() %>%
-      ggplot(aes(age, n, color = sex)) +
-      geom_line() +
-      labs(y = 'Estimated number of injuries')
-  }, res = 96)
+    selected_pt_list() %>% ggplot(aes(AGES, n, color = W01SEX)) + 
+      geom_line()
+  })
   
+  output$c1 <- renderTable(selected_suga_list(), width = "100%")
 }
 
 shinyApp(ui, server)
